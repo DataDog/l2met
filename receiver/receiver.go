@@ -7,18 +7,19 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/ryandotsmith/l2met/auth"
-	"github.com/ryandotsmith/l2met/bucket"
-	"github.com/ryandotsmith/l2met/conf"
-	"github.com/ryandotsmith/l2met/metchan"
-	"github.com/ryandotsmith/l2met/parser"
-	"github.com/ryandotsmith/l2met/store"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/DataDog/l2met/auth"
+	"github.com/DataDog/l2met/bucket"
+	"github.com/DataDog/l2met/conf"
+	"github.com/DataDog/l2met/metchan"
+	"github.com/DataDog/l2met/parser"
+	"github.com/DataDog/l2met/store"
 )
 
 // We read the body of an http request and then close the request.
@@ -119,7 +120,7 @@ func (r *Receiver) Wait() {
 func (r *Receiver) accept() {
 	for req := range r.Inbox {
 		rdr := bufio.NewReader(bytes.NewReader(req.Body))
-		//TODO(ryandotsmith): Use a cached store time.
+		//TODO(DataDog): Use a cached store time.
 		// The code to use here should look something like this:
 		// storeTime := r.Store.Now()
 		// However, since we are in a tight loop here,

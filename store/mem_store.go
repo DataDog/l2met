@@ -2,10 +2,11 @@ package store
 
 import (
 	"errors"
-	"github.com/ryandotsmith/l2met/bucket"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/DataDog/l2met/bucket"
 )
 
 type MemStore struct {
@@ -31,7 +32,7 @@ func (m *MemStore) Now() time.Time {
 
 func (m *MemStore) Scan(schedule time.Time) (<-chan *bucket.Bucket, error) {
 	m.Lock()
-	//TODO(ryandotsmith): Can we eliminate the magical number?
+	//TODO(DataDog): Can we eliminate the magical number?
 	buckets := make(chan *bucket.Bucket, 1000)
 	go func(out chan *bucket.Bucket) {
 		defer m.Unlock()

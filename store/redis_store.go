@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/garyburd/redigo/redis"
-	"github.com/ryandotsmith/l2met/bucket"
-	"github.com/ryandotsmith/l2met/conf"
-	"github.com/ryandotsmith/l2met/metchan"
-	"github.com/ryandotsmith/redisync"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/DataDog/l2met/bucket"
+	"github.com/DataDog/l2met/conf"
+	"github.com/DataDog/l2met/metchan"
+	"github.com/garyburd/redigo/redis"
+	"github.com/ryandotsmith/redisync"
 )
 
 const (

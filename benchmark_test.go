@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/ryandotsmith/l2met/metchan"
-	"github.com/ryandotsmith/l2met/receiver"
-	"github.com/ryandotsmith/l2met/store"
 	"testing"
 	"time"
+
+	"github.com/DataDog/l2met/metchan"
+	"github.com/DataDog/l2met/receiver"
+	"github.com/DataDog/l2met/store"
 )
 
 func BenchmarkReceive(b *testing.B) {

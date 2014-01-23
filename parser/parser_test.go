@@ -3,9 +3,10 @@ package parser
 import (
 	"bufio"
 	"bytes"
-	"github.com/ryandotsmith/l2met/bucket"
-	"github.com/ryandotsmith/l2met/metchan"
 	"testing"
+
+	"github.com/DataDog/l2met/bucket"
+	"github.com/DataDog/l2met/metchan"
 )
 
 type testCase struct {

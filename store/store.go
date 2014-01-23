@@ -3,9 +3,10 @@
 package store
 
 import (
-	"github.com/ryandotsmith/l2met/bucket"
 	"net/http"
 	"time"
+
+	"github.com/DataDog/l2met/bucket"
 )
 
 type Store interface {

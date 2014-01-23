@@ -1,12 +1,13 @@
 package store
 
 import (
-	"github.com/ryandotsmith/l2met/bucket"
-	"github.com/ryandotsmith/l2met/conf"
-	"github.com/ryandotsmith/l2met/metchan"
-	"github.com/ryandotsmith/redisync"
 	"testing"
 	"time"
+
+	"github.com/DataDog/l2met/bucket"
+	"github.com/DataDog/l2met/conf"
+	"github.com/DataDog/l2met/metchan"
+	"github.com/ryandotsmith/redisync"
 )
 
 func TestRedisGet(t *testing.T) {

@@ -2,13 +2,14 @@ package metchan
 
 import (
 	"encoding/json"
-	"github.com/ryandotsmith/l2met/conf"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/DataDog/l2met/conf"
 )
 
 func serve(buf *[]string) (*url.URL, *httptest.Server) {
@@ -23,9 +24,9 @@ func serve(buf *[]string) (*url.URL, *httptest.Server) {
 }
 
 var metTests = []struct {
-	inName  string
-	out     []string
-	start   time.Time
+	inName string
+	out    []string
+	start  time.Time
 }{
 
 	{

@@ -5,11 +5,12 @@ package reader
 
 import (
 	"fmt"
-	"github.com/ryandotsmith/l2met/bucket"
-	"github.com/ryandotsmith/l2met/conf"
-	"github.com/ryandotsmith/l2met/metchan"
-	"github.com/ryandotsmith/l2met/store"
 	"time"
+
+	"github.com/DataDog/l2met/bucket"
+	"github.com/DataDog/l2met/conf"
+	"github.com/DataDog/l2met/metchan"
+	"github.com/DataDog/l2met/store"
 )
 
 type Reader struct {

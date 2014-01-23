@@ -5,14 +5,15 @@ package parser
 import (
 	"bufio"
 	"fmt"
-	"github.com/bmizerany/lpx"
-	"github.com/ryandotsmith/l2met/auth"
-	"github.com/ryandotsmith/l2met/bucket"
-	"github.com/ryandotsmith/l2met/metchan"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/DataDog/l2met/auth"
+	"github.com/DataDog/l2met/bucket"
+	"github.com/DataDog/l2met/metchan"
+	"github.com/bmizerany/lpx"
 )
 
 var bucketDropExpr = regexp.MustCompile(`\:\s(\d+)\smessages`)

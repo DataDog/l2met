@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ryandotsmith/l2met/bucket"
-	"github.com/ryandotsmith/l2met/conf"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -17,6 +15,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/DataDog/l2met/bucket"
+	"github.com/DataDog/l2met/conf"
 )
 
 type libratoGauge struct {
@@ -28,15 +29,15 @@ type Channel struct {
 	FlushInterval time.Duration
 	// The Channel is thread-safe.
 	sync.Mutex
-	username string
-	password string
-	verbose  bool
-	Enabled  bool
-	Buffer   map[string]*bucket.Bucket
-	outbox   chan *bucket.LibratoMetric
-	url      *url.URL
-	source   string
-	appName  string
+	username   string
+	password   string
+	verbose    bool
+	Enabled    bool
+	Buffer     map[string]*bucket.Bucket
+	outbox     chan *bucket.LibratoMetric
+	url        *url.URL
+	source     string
+	appName    string
 	numOutlets int
 }
 

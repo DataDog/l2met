@@ -4,17 +4,18 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/ryandotsmith/l2met/auth"
-	"github.com/ryandotsmith/l2met/conf"
-	"github.com/ryandotsmith/l2met/metchan"
-	"github.com/ryandotsmith/l2met/outlet"
-	"github.com/ryandotsmith/l2met/reader"
-	"github.com/ryandotsmith/l2met/receiver"
-	"github.com/ryandotsmith/l2met/store"
 	"log"
 	"net/http"
 	"os"
 	"runtime"
+
+	"github.com/DataDog/l2met/auth"
+	"github.com/DataDog/l2met/conf"
+	"github.com/DataDog/l2met/metchan"
+	"github.com/DataDog/l2met/outlet"
+	"github.com/DataDog/l2met/reader"
+	"github.com/DataDog/l2met/receiver"
+	"github.com/DataDog/l2met/store"
 )
 
 // Hold onto the app's global config.

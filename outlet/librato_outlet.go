@@ -8,17 +8,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ryandotsmith/l2met/auth"
-	"github.com/ryandotsmith/l2met/bucket"
-	"github.com/ryandotsmith/l2met/conf"
-	"github.com/ryandotsmith/l2met/metchan"
-	"github.com/ryandotsmith/l2met/reader"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/DataDog/l2met/auth"
+	"github.com/DataDog/l2met/bucket"
+	"github.com/DataDog/l2met/conf"
+	"github.com/DataDog/l2met/metchan"
+	"github.com/DataDog/l2met/reader"
 )
 
 var libratoUrl = "https://metrics-api.librato.com/v1/metrics"
