@@ -53,10 +53,18 @@ func main() {
 		fmt.Printf("at=initialized-mem-store\n")
 	}
 
-	if cfg.UseOutlet {
+	if cfg.UseLibratoOutlet {
 		rdr := reader.New(cfg, st)
 		rdr.Mchan = mchan
 		outlet := outlet.NewLibratoOutlet(cfg, rdr)
+		outlet.Mchan = mchan
+		outlet.Start()
+	}
+
+	if cfg.UseDataDogOutlet {
+		rdr := reader.New(cfg, st)
+		rdr.Mchan = mchan
+		outlet := outlet.NewDataDogOutlet(cfg, rdr)
 		outlet.Mchan = mchan
 		outlet.Start()
 	}

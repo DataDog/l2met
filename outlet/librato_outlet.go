@@ -193,7 +193,7 @@ func (l *LibratoOutlet) post(u, p string, body []byte) error {
 	return nil
 }
 
-// Keep an eye on the lenghts of our bufferes.
+// Keep an eye on the lenghts of our buffers.
 // If they are maxed out, something is going wrong.
 func (l *LibratoOutlet) Report() {
 	for _ = range time.Tick(time.Second) {

@@ -33,6 +33,16 @@ type LibratoMetric struct {
 	Attr   *libratoAttrs `json:"attributes,omitempty"`
 }
 
+type Point [2]float64
+
+type DataDogMetric struct {
+	Metric string   `json:"metric"`
+	Host   string   `json:"host"`
+	Tags   []string `json:"tags"`
+	Type   string   `json:"type"`
+	Points []Point  `json:"points"`
+}
+
 type Bucket struct {
 	sync.Mutex
 	Id   *Id

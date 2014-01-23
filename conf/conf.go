@@ -28,7 +28,8 @@ type D struct {
 	FlushInterval    time.Duration
 	OutletInterval   time.Duration
 	UsingReciever    bool
-	UseOutlet        bool
+	UseLibratoOutlet bool
+	UseDataDogOutlet bool
 	Verbose          bool
 }
 
@@ -54,13 +55,13 @@ func New() *D {
 		"HTTP server's bind port.")
 
 	flag.IntVar(&d.OutletRetries, "outlet-retry", 2,
-		"Number of attempts to outlet metrics to Librato.")
+		"Number of attempts to outlet metrics.")
 
 	flag.Int64Var(&d.ReceiverDeadline, "recv-deadline", 2,
 		"Number of time units to pass before dropping incoming logs.")
 
 	flag.DurationVar(&d.OutletTtl, "outlet-ttl", time.Second*2,
-		"Timeout set on Librato HTTP requests.")
+		"Timeout set on outlet HTTP requests.")
 
 	flag.Uint64Var(&d.MaxPartitions, "partitions", uint64(1),
 		"Number of partitions to use for outlets.")
@@ -73,7 +74,10 @@ func New() *D {
 		"Time to wait before outlets read buckets from the store. "+
 			"Example:60s 30s 1m")
 
-	flag.BoolVar(&d.UseOutlet, "outlet", false,
+	flag.BoolVar(&d.UseDataDogOutlet, "outlet-datadog", false,
+		"Start the DataDog outlet.")
+
+	flag.BoolVar(&d.UseLibratoOutlet, "outlet-librato", false,
 		"Start the Librato outlet.")
 
 	flag.BoolVar(&d.UsingReciever, "receiver", false,
@@ -83,6 +87,10 @@ func New() *D {
 		"Enable verbose log output.")
 
 	d.RedisHost, d.RedisPass, _ = parseRedisUrl(env("REDIS_URL"))
+
+	// SECRETS are used to decrypt incoming credentials.
+	// You can encrypt the credentials with the secret by hitting /sign, as explained here:
+	//   https://github.com/ryandotsmith/l2met/wiki/Usage#encrypted-librato-credentials
 	d.Secrets = strings.Split(mustenv("SECRETS"), ":")
 
 	if len(env("METCHAN_URL")) > 0 {

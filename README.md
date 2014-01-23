@@ -1,6 +1,16 @@
 # DataDog fork
 
-This is a fork of l2met to output to datadog rather than librato.  Since l2met is GPL licensed, if we end up distributing this, we'll have to make the source available.  The original README follows:
+This is a fork of l2met to output to datadog rather than librato.  Since l2met is GPL licensed, if we end up distributing this, we'll have to make the source available.  
+
+## Design Changes for DataDog usage
+
+The authorization for datadog API usage are just the single api_key.  [Encrypt it the same
+way](https://github.com/ryandotsmith/l2met/wiki/Usage#encrypted-librato-credentials) as the librato username/password was encrypted, but since it's just
+a single key there's no need for the colon separated values.
+
+The `-outlet` flag has been replaced by `-outlet-datadog` and `-outlet-librato` to enable the DataDog and Librato outlets, respectively.
+
+The original README follows:
 
 # An Important Update
 L2met was born out of the desire to expose an effortless ingress point into Librato's systems. The project boasted no client libraries, 0-configuration (for the app developer), and percentile calculations. Since the inception of this project, the fine folks at Librato have always taken an interest in l2met. Librato has taken their interest to the extreme in that they now offer a hosted version of l2met. **You should be using their service for production metrics.** For instructions on how to integrate with Librato's log processing tier, see their [knowledge base article](http://support.metrics.librato.com/knowledgebase/articles/265391-heroku-native-and-custom-metrics-without-the-libra).

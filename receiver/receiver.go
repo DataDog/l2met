@@ -201,7 +201,7 @@ func (r *Receiver) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	// If we can decrypt the authentication
-	// we know it is valid and thus good enought
+	// we know it is valid and thus good enough
 	// for our receiver. Later, another routine
 	// can extract the username and password from
 	// the auth to use it against the Librato API.
