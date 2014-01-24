@@ -8,39 +8,30 @@ import (
 	"sync"
 )
 
-type libratoAttrs struct {
-	Min   int    `json:"display_min"`
-	Units string `json:"display_units_long"`
+type MetricAttrs struct {
+	Min   int
+	Units string
 }
 
-// When submitting data to Librato, we need to coerce
+// When submitting data upstream, we need to coerce
 // our bucket representation into something their API
 // can handle. Because there is not a 1-1 parity
 // with the statistical functions that a bucket offers and
-// the types of data the Librato API accepts (e.g. Librato does-
+// the types of data the other APIs accept (e.g. Librato does-
 // not have support for perc50, perc95, perc99) we need to expand
-// our bucket into a set of LibratoMetric(s).
-type LibratoMetric struct {
-	Name   string        `json:"name"`
-	Time   int64         `json:"measure_time"`
-	Val    *float64      `json:"value,omitempty"`
-	Count  *int          `json:"count,omitempty"`
-	Sum    *float64      `json:"sum,omitempty"`
-	Max    *float64      `json:"max,omitempty"`
-	Min    *float64      `json:"min,omitempty"`
-	Source string        `json:"source,omitempty"`
-	Auth   string        `json:"-"`
-	Attr   *libratoAttrs `json:"attributes,omitempty"`
-}
-
-type Point [2]float64
-
-type DataDogMetric struct {
-	Metric string   `json:"metric"`
-	Host   string   `json:"host"`
-	Tags   []string `json:"tags"`
-	Type   string   `json:"type"`
-	Points []Point  `json:"points"`
+// our bucket into a set of Metric(s).
+type Metric struct {
+	Name      string
+	Time      int64
+	Val       *float64
+	Count     *int
+	Sum       *float64
+	Max       *float64
+	Min       *float64
+	Source    string
+	Auth      string
+	Attr      *MetricAttrs
+	IsComplex bool
 }
 
 type Bucket struct {
@@ -80,7 +71,7 @@ func (b *Bucket) Merge(other *Bucket) {
 
 // Relies on the Emitter to determine which type of
 // metrics should be returned.
-func (b *Bucket) Metrics() []*LibratoMetric {
+func (b *Bucket) Metrics() []*Metric {
 	switch b.Id.Type {
 	case "measurement":
 		return b.EmitMeasurements()
@@ -95,8 +86,8 @@ func (b *Bucket) Metrics() []*LibratoMetric {
 
 // The standard emitter. All log data with `measure.foo` will
 // be mapped to the MeasureEmitter.
-func (b *Bucket) EmitMeasurements() []*LibratoMetric {
-	metrics := make([]*LibratoMetric, 4)
+func (b *Bucket) EmitMeasurements() []*Metric {
+	metrics := make([]*Metric, 4)
 	metrics[0] = b.ComplexMetric()
 	metrics[1] = b.Metric(".median", b.Median())
 	metrics[2] = b.Metric(".perc95", b.Perc95())
@@ -104,44 +95,45 @@ func (b *Bucket) EmitMeasurements() []*LibratoMetric {
 	return metrics
 }
 
-func (b *Bucket) EmitCounters() []*LibratoMetric {
-	metrics := make([]*LibratoMetric, 1)
+func (b *Bucket) EmitCounters() []*Metric {
+	metrics := make([]*Metric, 1)
 	metrics[0] = b.Metric("", b.Sum)
 	return metrics
 }
 
-func (b *Bucket) EmitSamples() []*LibratoMetric {
-	metrics := make([]*LibratoMetric, 1)
+func (b *Bucket) EmitSamples() []*Metric {
+	metrics := make([]*Metric, 1)
 	metrics[0] = b.Metric("", b.Last())
 	return metrics
 }
 
-func (b *Bucket) ComplexMetric() *LibratoMetric {
+func (b *Bucket) ComplexMetric() *Metric {
 	min := b.Min()
 	max := b.Max()
 	cnt := b.Count()
 	sum := b.Sum
-	return &LibratoMetric{
-		Attr: &libratoAttrs{
+	return &Metric{
+		Attr: &MetricAttrs{
 			Min:   0,
 			Units: b.Id.Units,
 		},
-		Name:   b.Id.Name,
-		Source: b.Id.Source,
-		Time:   b.Id.Time.Unix(),
-		Auth:   b.Id.Auth,
-		Min:    &min,
-		Max:    &max,
-		Sum:    &sum,
-		Count:  &cnt,
+		Name:      b.Id.Name,
+		Source:    b.Id.Source,
+		Time:      b.Id.Time.Unix(),
+		Auth:      b.Id.Auth,
+		Min:       &min,
+		Max:       &max,
+		Sum:       &sum,
+		Count:     &cnt,
+		IsComplex: true,
 	}
 }
 
-// If an non-empty suffix is given, the name of the resulting LibratoMetric
+// If an non-empty suffix is given, the name of the resulting Metric
 // will contain the suffix.
-func (b *Bucket) Metric(suffix string, val float64) *LibratoMetric {
-	return &LibratoMetric{
-		Attr: &libratoAttrs{
+func (b *Bucket) Metric(suffix string, val float64) *Metric {
+	return &Metric{
+		Attr: &MetricAttrs{
 			Min:   0,
 			Units: b.Id.Units,
 		},

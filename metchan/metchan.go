@@ -1,15 +1,10 @@
 // An internal metrics channel.
 // l2met internal components can publish their metrics
-// here and they will be outletted to Librato.
+// here and they will be outletted.
 package metchan
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -19,10 +14,6 @@ import (
 	"github.com/DataDog/l2met/bucket"
 	"github.com/DataDog/l2met/conf"
 )
-
-type libratoGauge struct {
-	Gauges []*bucket.LibratoMetric `json:"gauges"`
-}
 
 type Channel struct {
 	// The time by which metchan will aggregate internal metrics.
@@ -34,7 +25,7 @@ type Channel struct {
 	verbose    bool
 	Enabled    bool
 	Buffer     map[string]*bucket.Bucket
-	outbox     chan *bucket.LibratoMetric
+	outbox     chan *bucket.Metric
 	url        *url.URL
 	source     string
 	appName    string
@@ -68,7 +59,7 @@ func New(cfg *conf.D) *Channel {
 
 	// Internal Datastructures.
 	c.Buffer = make(map[string]*bucket.Bucket)
-	c.outbox = make(chan *bucket.LibratoMetric, cfg.BufferSize)
+	c.outbox = make(chan *bucket.Metric, cfg.BufferSize)
 
 	// Default flush interval.
 	c.FlushInterval = time.Minute
@@ -182,36 +173,42 @@ func (c *Channel) outlet() {
 	}
 }
 
-func (c *Channel) post(m *bucket.LibratoMetric) error {
-	p := &libratoGauge{[]*bucket.LibratoMetric{m}}
-	j, err := json.Marshal(p)
-	if err != nil {
-		return err
-	}
-	body := bytes.NewBuffer(j)
-	req, err := http.NewRequest("POST", c.url.String(), body)
-	if err != nil {
-		return err
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("User-Agent", "l2met-metchan/0")
-	req.Header.Add("Connection", "Keep-Alive")
-	req.SetBasicAuth(c.username, c.password)
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode/100 != 2 {
-		var m string
-		s, err := ioutil.ReadAll(resp.Body)
+func (c *Channel) post(m *bucket.Metric) error {
+	// FIXME: this is all basically copied from the outlet; it should be
+	// accessible via the outlet instead, so that the channel can send out
+	// on whatever outlets it needs to
+
+	/*
+		p := &libratoGauge{[]*bucket.Metric{m}}
+		j, err := json.Marshal(p)
 		if err != nil {
-			m = fmt.Sprintf("code=%d", resp.StatusCode)
-		} else {
-			m = fmt.Sprintf("code=%d resp=body=%s req-body=%s",
-				resp.StatusCode, s, body)
+			return err
 		}
-		return errors.New(m)
-	}
+		body := bytes.NewBuffer(j)
+		req, err := http.NewRequest("POST", c.url.String(), body)
+		if err != nil {
+			return err
+		}
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("User-Agent", "l2met-metchan/0")
+		req.Header.Add("Connection", "Keep-Alive")
+		req.SetBasicAuth(c.username, c.password)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode/100 != 2 {
+			var m string
+			s, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				m = fmt.Sprintf("code=%d", resp.StatusCode)
+			} else {
+				m = fmt.Sprintf("code=%d resp=body=%s req-body=%s",
+					resp.StatusCode, s, body)
+			}
+			return errors.New(m)
+		}
+	*/
 	return nil
 }
