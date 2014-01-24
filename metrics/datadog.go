@@ -23,7 +23,7 @@ type point [2]float64
 type DataDog struct {
 	Metric string   `json:"metric"`
 	Host   string   `json:"host,omitempty"`
-	Tags   []string `json:"tags"`
+	Tags   []string `json:"tags,omitempty"`
 	Type   string   `json:"type"`
 	Auth   string   `json:"-"`
 	Points []point  `json:"points"`
@@ -83,7 +83,7 @@ func (d DataDogConverter) Convert() []*DataDog {
 
 }
 
-func (d DataDogConverter) Post(api_key string) error {
+func (d DataDogConverter) Post(url, api_key string) error {
 	metrics := d.Convert()
 	if len(metrics) == 0 {
 		return errors.New("empty-metrics-error")
@@ -94,18 +94,19 @@ func (d DataDogConverter) Post(api_key string) error {
 		return fmt.Errorf("at=json error=%s key=%s\n", err, api_key)
 	}
 
-	req, err := DataDogCreateRequest(api_key, body)
+	req, err := DataDogCreateRequest(url, api_key, body)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
+
 	return DataDogHandleResponse(resp, body)
 }
 
-func DataDogCreateRequest(api_key string, body []byte) (*http.Request, error) {
+func DataDogCreateRequest(url, api_key string, body []byte) (*http.Request, error) {
 	b := bytes.NewBuffer(body)
-	req, err := http.NewRequest("POST", DataDogUrl+"?api_key="+api_key, b)
+	req, err := http.NewRequest("POST", url+"?api_key="+api_key, b)
 	if err != nil {
 		return req, err
 	}

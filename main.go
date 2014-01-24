@@ -12,6 +12,7 @@ import (
 	"github.com/DataDog/l2met/auth"
 	"github.com/DataDog/l2met/conf"
 	"github.com/DataDog/l2met/metchan"
+	"github.com/DataDog/l2met/metrics"
 	"github.com/DataDog/l2met/outlet"
 	"github.com/DataDog/l2met/reader"
 	"github.com/DataDog/l2met/receiver"
@@ -24,6 +25,9 @@ var cfg *conf.D
 func init() {
 	cfg = conf.New()
 	flag.Parse()
+	if len(cfg.DataDogApiBase) > 0 {
+		metrics.DataDogUrl = cfg.DataDogApiBase
+	}
 }
 
 func init() {

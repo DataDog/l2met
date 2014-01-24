@@ -34,11 +34,11 @@ type Channel struct {
 }
 
 // Returns an initialized Metchan Channel.
-// Creates a new HTTP client for direct access to Librato.
-// This channel is orthogonal with other librato http clients in l2met.
+// Creates a new HTTP client for direct access upstream.
+// This channel is orthogonal with other outlet http clients in l2met.
 // If a blank URL is given, no metric posting attempt will be made.
 // If verbose is set to true, the metric will be printed to STDOUT
-// regardless of whether the metric is sent to Librato.
+// regardless of whether the metric is sent upstream.
 func New(cfg *conf.D) *Channel {
 	c := new(Channel)
 
@@ -47,9 +47,11 @@ func New(cfg *conf.D) *Channel {
 	// enable the Metchan.
 	if cfg.MetchanUrl != nil {
 		c.url = cfg.MetchanUrl
-		c.username = cfg.MetchanUrl.User.Username()
-		c.password, _ = cfg.MetchanUrl.User.Password()
-		c.url.User = nil
+		if c.url.User != nil {
+			c.username = c.url.User.Username()
+			c.password, _ = c.url.User.Password()
+			c.url.User = nil
+		}
 		c.Enabled = true
 	}
 
@@ -63,7 +65,7 @@ func New(cfg *conf.D) *Channel {
 	c.outbox = make(chan *bucket.Metric, cfg.BufferSize)
 
 	// Default flush interval.
-	c.FlushInterval = time.Minute
+	c.FlushInterval = time.Second * 5
 
 	host, err := os.Hostname()
 	if err == nil {
@@ -84,7 +86,7 @@ func (c *Channel) Start() {
 
 // Provide the time at which you started your measurement.
 // Places the measurement in a buffer to be aggregated and
-// eventually flushed to Librato.
+// eventually flushed upstream.
 func (c *Channel) Time(name string, t time.Time) {
 	elapsed := time.Since(t) / time.Millisecond
 	c.Measure(name, float64(elapsed))
@@ -177,5 +179,5 @@ func (c *Channel) outlet() {
 func (c *Channel) post(m *bucket.Metric) error {
 	// FIXME: hardcoded to push to datadog, should be configurable?
 	dd := metrics.DataDogConverter{m}
-	return dd.Post(c.username)
+	return dd.Post(c.url.String(), c.username)
 }

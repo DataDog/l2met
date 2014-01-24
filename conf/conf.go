@@ -27,6 +27,7 @@ type D struct {
 	MaxPartitions    uint64
 	FlushInterval    time.Duration
 	OutletInterval   time.Duration
+	DataDogApiBase   string
 	UsingReciever    bool
 	UseLibratoOutlet bool
 	UseDataDogOutlet bool
@@ -76,6 +77,9 @@ func New() *D {
 
 	flag.BoolVar(&d.UseDataDogOutlet, "outlet-datadog", false,
 		"Start the DataDog outlet.")
+
+	flag.StringVar(&d.DataDogApiBase, "datadog-api-base", "",
+		"Base url for the DataDog API.")
 
 	flag.BoolVar(&d.UseLibratoOutlet, "outlet-librato", false,
 		"Start the Librato outlet.")

@@ -81,6 +81,7 @@ func (l *DataDogOutlet) convert() {
 			}
 		}
 		delay := bucket.Id.Delay(time.Now())
+		fmt.Println("got buckets on the inbox with delay ", float64(delay))
 		l.Mchan.Measure("outlet.delay", float64(delay))
 	}
 }
@@ -127,13 +128,14 @@ func (l *DataDogOutlet) outlet() {
 			fmt.Printf("error=%s\n", err)
 			continue
 		}
-		ddReq := &metrics.DataDogRequest{payloads}
 
+		ddReq := &metrics.DataDogRequest{payloads}
 		j, err := json.Marshal(ddReq)
 		if err != nil {
 			fmt.Printf("at=json error=%s key=%s\n", err, api_key)
 			continue
 		}
+		fmt.Printf("posting %d metric payloads w/ api_key %s\n", len(payloads), api_key)
 		if err := l.postWithRetry(api_key, j); err != nil {
 			l.Mchan.Measure("outlet.drop", 1)
 		}
@@ -157,7 +159,8 @@ func (l *DataDogOutlet) postWithRetry(api_key string, body []byte) error {
 
 func (l *DataDogOutlet) post(api_key string, body []byte) error {
 	defer l.Mchan.Time("outlet.post", time.Now())
-	req, err := metrics.DataDogCreateRequest(api_key, body)
+	fmt.Printf("posting to %s?api_key=%s\n", metrics.DataDogUrl, api_key)
+	req, err := metrics.DataDogCreateRequest(metrics.DataDogUrl, api_key, body)
 	resp, err := l.conn.Do(req)
 	if err != nil {
 		return err
