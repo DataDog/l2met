@@ -13,6 +13,7 @@ import (
 
 	"github.com/DataDog/l2met/bucket"
 	"github.com/DataDog/l2met/conf"
+	"github.com/DataDog/l2met/metrics"
 )
 
 type Channel struct {
@@ -174,41 +175,7 @@ func (c *Channel) outlet() {
 }
 
 func (c *Channel) post(m *bucket.Metric) error {
-	// FIXME: this is all basically copied from the outlet; it should be
-	// accessible via the outlet instead, so that the channel can send out
-	// on whatever outlets it needs to
-
-	/*
-		p := &libratoGauge{[]*bucket.Metric{m}}
-		j, err := json.Marshal(p)
-		if err != nil {
-			return err
-		}
-		body := bytes.NewBuffer(j)
-		req, err := http.NewRequest("POST", c.url.String(), body)
-		if err != nil {
-			return err
-		}
-		req.Header.Add("Content-Type", "application/json")
-		req.Header.Add("User-Agent", "l2met-metchan/0")
-		req.Header.Add("Connection", "Keep-Alive")
-		req.SetBasicAuth(c.username, c.password)
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode/100 != 2 {
-			var m string
-			s, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				m = fmt.Sprintf("code=%d", resp.StatusCode)
-			} else {
-				m = fmt.Sprintf("code=%d resp=body=%s req-body=%s",
-					resp.StatusCode, s, body)
-			}
-			return errors.New(m)
-		}
-	*/
-	return nil
+	// FIXME: hardcoded to push to datadog, should be configurable?
+	dd := metrics.DataDogConverter{m}
+	return dd.Post()
 }

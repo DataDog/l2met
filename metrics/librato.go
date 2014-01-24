@@ -2,8 +2,10 @@ package metrics
 
 import "github.com/DataDog/l2met/bucket"
 
+var LibratoUrl = "https://metrics-api.librato.com/v1/metrics"
+
 type LibratoRequest struct {
-	Gauges []*LibratoMetric `json:"gauges"`
+	Gauges []*Librato `json:"gauges"`
 }
 
 type LibratoAttrs struct {
@@ -17,8 +19,8 @@ type LibratoAttrs struct {
 // with the statistical functions that a bucket offers and
 // the types of data the Librato API accepts (e.g. Librato does-
 // not have support for perc50, perc95, perc99) we need to expand
-// our bucket into a set of LibratoMetric(s).
-type LibratoMetric struct {
+// our bucket into a set of Librato(s).
+type Librato struct {
 	Name   string        `json:"name"`
 	Time   int64         `json:"measure_time"`
 	Val    *float64      `json:"value,omitempty"`
@@ -31,13 +33,13 @@ type LibratoMetric struct {
 	Attr   *LibratoAttrs `json:"attributes,omitempty"`
 }
 
-// Convert a bucket.Metric to a LibratoMetric
-func LibratoConvertMetric(m *bucket.Metric) *LibratoMetric {
+// Convert a bucket.Metric to a Librato
+func LibratoConvertMetric(m *bucket.Metric) *Librato {
 	attrs := &LibratoAttrs{
 		Min:   m.Attr.Min,
 		Units: m.Attr.Units,
 	}
-	l := &LibratoMetric{
+	l := &Librato{
 		Name:   m.Name,
 		Time:   m.Time,
 		Val:    m.Val,

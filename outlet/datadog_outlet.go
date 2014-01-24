@@ -4,11 +4,9 @@
 package outlet
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"runtime"
@@ -22,12 +20,10 @@ import (
 	"github.com/DataDog/l2met/reader"
 )
 
-var datadogUrl = "https://app.datadoghq.com/api/v1/series"
-
 type DataDogOutlet struct {
 	inbox       chan *bucket.Bucket
-	conversions chan *metrics.DataDogMetric
-	outbox      chan []*metrics.DataDogMetric
+	conversions chan *metrics.DataDog
+	outbox      chan []*metrics.DataDog
 	numOutlets  int
 	rdr         *reader.Reader
 	conn        *http.Client
@@ -53,8 +49,8 @@ func NewDataDogOutlet(cfg *conf.D, r *reader.Reader) *DataDogOutlet {
 	l := &DataDogOutlet{
 		conn:        buildDataDogClient(cfg.OutletTtl),
 		inbox:       make(chan *bucket.Bucket, cfg.BufferSize),
-		conversions: make(chan *metrics.DataDogMetric, cfg.BufferSize),
-		outbox:      make(chan []*metrics.DataDogMetric, cfg.BufferSize),
+		conversions: make(chan *metrics.DataDog, cfg.BufferSize),
+		outbox:      make(chan []*metrics.DataDog, cfg.BufferSize),
 		numOutlets:  cfg.Concurrency,
 		numRetries:  cfg.OutletRetries,
 		rdr:         r,
@@ -79,7 +75,8 @@ func (l *DataDogOutlet) Start() {
 func (l *DataDogOutlet) convert() {
 	for bucket := range l.inbox {
 		for _, metric := range bucket.Metrics() {
-			for _, m := range metrics.DataDogConvertMetric(metric) {
+			dd := metrics.DataDogConverter{metric}
+			for _, m := range dd.Convert() {
 				l.conversions <- m
 			}
 		}
@@ -90,7 +87,7 @@ func (l *DataDogOutlet) convert() {
 
 func (l *DataDogOutlet) groupByUser() {
 	ticker := time.Tick(time.Millisecond * 200)
-	m := make(map[string][]*metrics.DataDogMetric)
+	m := make(map[string][]*metrics.DataDog)
 	for {
 		select {
 		case <-ticker:
@@ -103,7 +100,7 @@ func (l *DataDogOutlet) groupByUser() {
 		case payload := <-l.conversions:
 			usr := payload.Auth
 			if _, present := m[usr]; !present {
-				m[usr] = make([]*metrics.DataDogMetric, 1, 300)
+				m[usr] = make([]*metrics.DataDog, 1, 300)
 				m[usr][0] = payload
 			} else {
 				m[usr] = append(m[usr], payload)
@@ -160,31 +157,13 @@ func (l *DataDogOutlet) postWithRetry(api_key string, body []byte) error {
 
 func (l *DataDogOutlet) post(api_key string, body []byte) error {
 	defer l.Mchan.Time("outlet.post", time.Now())
-	b := bytes.NewBuffer(body)
-	req, err := http.NewRequest("POST", datadogUrl+"?api_key="+api_key, b)
-	if err != nil {
-		return err
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("User-Agent", "l2met/"+conf.Version)
-	req.Header.Add("Connection", "Keep-Alive")
+	req, err := metrics.DataDogCreateRequest(api_key, body)
 	resp, err := l.conn.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode/100 != 2 {
-		var m string
-		s, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			m = fmt.Sprintf("error=failed-request code=%d", resp.StatusCode)
-		} else {
-			m = fmt.Sprintf("error=failed-request code=%d resp=body=%s req-body=%s",
-				resp.StatusCode, s, body)
-		}
-		return errors.New(m)
-	}
-	return nil
+	return metrics.DataDogHandleResponse(resp, body)
 }
 
 // Keep an eye on the lenghts of our buffers.

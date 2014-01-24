@@ -23,12 +23,10 @@ import (
 	"github.com/DataDog/l2met/reader"
 )
 
-var libratoUrl = "https://metrics-api.librato.com/v1/metrics"
-
 type LibratoOutlet struct {
 	inbox       chan *bucket.Bucket
-	conversions chan *metrics.LibratoMetric
-	outbox      chan []*metrics.LibratoMetric
+	conversions chan *metrics.Librato
+	outbox      chan []*metrics.Librato
 	numOutlets  int
 	rdr         *reader.Reader
 	conn        *http.Client
@@ -54,8 +52,8 @@ func NewLibratoOutlet(cfg *conf.D, r *reader.Reader) *LibratoOutlet {
 	l := new(LibratoOutlet)
 	l.conn = buildClient(cfg.OutletTtl)
 	l.inbox = make(chan *bucket.Bucket, cfg.BufferSize)
-	l.conversions = make(chan *metrics.LibratoMetric, cfg.BufferSize)
-	l.outbox = make(chan []*metrics.LibratoMetric, cfg.BufferSize)
+	l.conversions = make(chan *metrics.Librato, cfg.BufferSize)
+	l.outbox = make(chan []*metrics.Librato, cfg.BufferSize)
 	l.numOutlets = cfg.Concurrency
 	l.numRetries = cfg.OutletRetries
 	l.rdr = r
@@ -88,7 +86,7 @@ func (l *LibratoOutlet) convert() {
 
 func (l *LibratoOutlet) groupByUser() {
 	ticker := time.Tick(time.Millisecond * 200)
-	m := make(map[string][]*metrics.LibratoMetric)
+	m := make(map[string][]*metrics.Librato)
 	for {
 		select {
 		case <-ticker:
@@ -101,7 +99,7 @@ func (l *LibratoOutlet) groupByUser() {
 		case payload := <-l.conversions:
 			usr := payload.Auth
 			if _, present := m[usr]; !present {
-				m[usr] = make([]*metrics.LibratoMetric, 1, 300)
+				m[usr] = make([]*metrics.Librato, 1, 300)
 				m[usr][0] = payload
 			} else {
 				m[usr] = append(m[usr], payload)
@@ -166,7 +164,7 @@ func (l *LibratoOutlet) postWithRetry(u, p string, body []byte) error {
 func (l *LibratoOutlet) post(u, p string, body []byte) error {
 	defer l.Mchan.Time("outlet.post", time.Now())
 	b := bytes.NewBuffer(body)
-	req, err := http.NewRequest("POST", libratoUrl, b)
+	req, err := http.NewRequest("POST", metrics.LibratoUrl, b)
 	if err != nil {
 		return err
 	}

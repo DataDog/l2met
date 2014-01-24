@@ -1,16 +1,27 @@
 package metrics
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+
+	"github.com/DataDog/l2met/auth"
 	"github.com/DataDog/l2met/bucket"
+	"github.com/DataDog/l2met/conf"
 )
 
+var DataDogUrl = "https://app.datadoghq.com/api/v1/series"
+
 type DataDogRequest struct {
-	Series []*DataDogMetric `json:"series"`
+	Series []*DataDog `json:"series"`
 }
 
 type point [2]float64
 
-type DataDogMetric struct {
+type DataDog struct {
 	Metric string   `json:"metric"`
 	Host   string   `json:"host,omitempty"`
 	Tags   []string `json:"tags"`
@@ -20,8 +31,8 @@ type DataDogMetric struct {
 }
 
 // Create a datadog metric for a metric and the requested metric type
-func DataDogComplexMetric(m *bucket.Metric, mtype string) *DataDogMetric {
-	d := &DataDogMetric{
+func DataDogComplexMetric(m *bucket.Metric, mtype string) *DataDog {
+	d := &DataDog{
 		Type: "gauge",
 		Auth: m.Auth,
 	}
@@ -44,25 +55,82 @@ func DataDogComplexMetric(m *bucket.Metric, mtype string) *DataDogMetric {
 	return d
 }
 
+type DataDogConverter struct {
+	Src *bucket.Metric
+}
+
 // Convert a metric into one or more datadog metrics.  Metrics marked as
 // complex actually map to 4 datadog metrics as there's no "complex" type
 // in the datadog API.
-func DataDogConvertMetric(m *bucket.Metric) []*DataDogMetric {
-	var metrics []*DataDogMetric
+func (d DataDogConverter) Convert() []*DataDog {
+	var metrics []*DataDog
+	var m = d.Src
 	if m.IsComplex {
-		metrics = make([]*DataDogMetric, 0, 4)
+		metrics = make([]*DataDog, 0, 4)
 		metrics = append(metrics, DataDogComplexMetric(m, "min"))
 		metrics = append(metrics, DataDogComplexMetric(m, "max"))
 		metrics = append(metrics, DataDogComplexMetric(m, "sum"))
 		metrics = append(metrics, DataDogComplexMetric(m, "count"))
 	} else {
-		d := &DataDogMetric{
+		d := &DataDog{
 			Metric: m.Name,
 			Type:   "gauge",
 			Auth:   m.Auth,
 			Points: []point{{float64(m.Time), *m.Val}},
 		}
-		metrics = []*DataDogMetric{d}
+		metrics = []*DataDog{d}
 	}
 	return metrics
+
+}
+
+func (d DataDogConverter) Post() error {
+	metrics := d.Convert()
+	if len(metrics) == 0 {
+		return errors.New("empty-metrics-error")
+	}
+	api_key, err := auth.Decrypt(metrics[0].Auth)
+	if err != nil {
+		return err
+	}
+	ddReq := &DataDogRequest{metrics}
+	body, err := json.Marshal(ddReq)
+	if err != nil {
+		return fmt.Errorf("at=json error=%s key=%s\n", err, api_key)
+	}
+
+	req, err := DataDogCreateRequest(api_key, body)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return DataDogHandleResponse(resp, body)
+}
+
+func DataDogCreateRequest(api_key string, body []byte) (*http.Request, error) {
+	b := bytes.NewBuffer(body)
+	req, err := http.NewRequest("POST", DataDogUrl+"?api_key="+api_key, b)
+	if err != nil {
+		return req, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("User-Agent", "l2met/"+conf.Version)
+	req.Header.Add("Connection", "Keep-Alive")
+	return req, nil
+}
+
+func DataDogHandleResponse(resp *http.Response, reqBody []byte) error {
+	if resp.StatusCode/100 != 2 {
+		var m string
+		s, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			m = fmt.Sprintf("error=failed-request code=%d", resp.StatusCode)
+		} else {
+			m = fmt.Sprintf("error=failed-request code=%d resp=body=%s req-body=%s",
+				resp.StatusCode, s, reqBody)
+		}
+		return errors.New(m)
+	}
+	return nil
 }
