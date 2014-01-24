@@ -18,30 +18,16 @@ import (
 	"github.com/DataDog/l2met/bucket"
 	"github.com/DataDog/l2met/conf"
 	"github.com/DataDog/l2met/metchan"
+	"github.com/DataDog/l2met/metrics"
 	"github.com/DataDog/l2met/reader"
 )
 
 var datadogUrl = "https://app.datadoghq.com/api/v1/series"
 
-type datadogRequest struct {
-	Series []*DataDogMetric `json:"series"`
-}
-
-type point [2]float64
-
-type DataDogMetric struct {
-	Metric string   `json:"metric"`
-	Host   string   `json:"host,omitempty"`
-	Tags   []string `json:"tags"`
-	Type   string   `json:"type"`
-	Auth   string   `json:"-"`
-	Points []point  `json:"points"`
-}
-
 type DataDogOutlet struct {
 	inbox       chan *bucket.Bucket
-	conversions chan *DataDogMetric
-	outbox      chan []*DataDogMetric
+	conversions chan *metrics.DataDogMetric
+	outbox      chan []*metrics.DataDogMetric
 	numOutlets  int
 	rdr         *reader.Reader
 	conn        *http.Client
@@ -63,60 +49,12 @@ func buildDataDogClient(ttl time.Duration) *http.Client {
 	return &http.Client{Transport: tr}
 }
 
-// Create a datadog metric for a metric and the requested metric type
-func DataDogComplexMetric(m *bucket.Metric, mtype string) *DataDogMetric {
-	d := &DataDogMetric{
-		Type: "gauge",
-		Auth: m.Auth,
-	}
-	switch mtype {
-	case "min":
-		d.Metric = m.Name + ".min"
-		d.Points = []point{{float64(m.Time), *m.Min}}
-	case "max":
-		d.Metric = m.Name + ".max"
-		d.Points = []point{{float64(m.Time), *m.Max}}
-	case "sum":
-		// XXX: decided that sum would be the 'default' metric name; is this right?
-		d.Metric = m.Name
-		d.Points = []point{{float64(m.Time), *m.Sum}}
-	case "count":
-		// FIXME: "counts as counts"?
-		d.Metric = m.Name + ".count"
-		d.Points = []point{{float64(m.Time), float64(*m.Count)}}
-	}
-	return d
-}
-
-// Convert a metric into one or more datadog metrics.  Metrics marked as
-// complex actually map to 4 datadog metrics as there's no "complex" type
-// in the datadog API.
-func DataDogConvertMetric(m *bucket.Metric) []*DataDogMetric {
-	var metrics []*DataDogMetric
-	if m.IsComplex {
-		metrics = make([]*DataDogMetric, 0, 4)
-		metrics = append(metrics, DataDogComplexMetric(m, "min"))
-		metrics = append(metrics, DataDogComplexMetric(m, "max"))
-		metrics = append(metrics, DataDogComplexMetric(m, "sum"))
-		metrics = append(metrics, DataDogComplexMetric(m, "count"))
-	} else {
-		d := &DataDogMetric{
-			Metric: m.Name,
-			Type:   "gauge",
-			Auth:   m.Auth,
-			Points: []point{{float64(m.Time), *m.Val}},
-		}
-		metrics = []*DataDogMetric{d}
-	}
-	return metrics
-}
-
 func NewDataDogOutlet(cfg *conf.D, r *reader.Reader) *DataDogOutlet {
 	l := &DataDogOutlet{
 		conn:        buildDataDogClient(cfg.OutletTtl),
 		inbox:       make(chan *bucket.Bucket, cfg.BufferSize),
-		conversions: make(chan *DataDogMetric, cfg.BufferSize),
-		outbox:      make(chan []*DataDogMetric, cfg.BufferSize),
+		conversions: make(chan *metrics.DataDogMetric, cfg.BufferSize),
+		outbox:      make(chan []*metrics.DataDogMetric, cfg.BufferSize),
 		numOutlets:  cfg.Concurrency,
 		numRetries:  cfg.OutletRetries,
 		rdr:         r,
@@ -141,7 +79,7 @@ func (l *DataDogOutlet) Start() {
 func (l *DataDogOutlet) convert() {
 	for bucket := range l.inbox {
 		for _, metric := range bucket.Metrics() {
-			for _, m := range DataDogConvertMetric(metric) {
+			for _, m := range metrics.DataDogConvertMetric(metric) {
 				l.conversions <- m
 			}
 		}
@@ -152,7 +90,7 @@ func (l *DataDogOutlet) convert() {
 
 func (l *DataDogOutlet) groupByUser() {
 	ticker := time.Tick(time.Millisecond * 200)
-	m := make(map[string][]*DataDogMetric)
+	m := make(map[string][]*metrics.DataDogMetric)
 	for {
 		select {
 		case <-ticker:
@@ -165,7 +103,7 @@ func (l *DataDogOutlet) groupByUser() {
 		case payload := <-l.conversions:
 			usr := payload.Auth
 			if _, present := m[usr]; !present {
-				m[usr] = make([]*DataDogMetric, 1, 300)
+				m[usr] = make([]*metrics.DataDogMetric, 1, 300)
 				m[usr][0] = payload
 			} else {
 				m[usr] = append(m[usr], payload)
@@ -192,7 +130,7 @@ func (l *DataDogOutlet) outlet() {
 			fmt.Printf("error=%s\n", err)
 			continue
 		}
-		ddReq := &datadogRequest{payloads}
+		ddReq := &metrics.DataDogRequest{payloads}
 
 		j, err := json.Marshal(ddReq)
 		if err != nil {

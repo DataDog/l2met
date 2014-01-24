@@ -19,44 +19,16 @@ import (
 	"github.com/DataDog/l2met/bucket"
 	"github.com/DataDog/l2met/conf"
 	"github.com/DataDog/l2met/metchan"
+	"github.com/DataDog/l2met/metrics"
 	"github.com/DataDog/l2met/reader"
 )
 
 var libratoUrl = "https://metrics-api.librato.com/v1/metrics"
 
-type libratoRequest struct {
-	Gauges []*LibratoMetric `json:"gauges"`
-}
-
-type LibratoAttrs struct {
-	Min   int    `json:"display_min"`
-	Units string `json:"display_units_long"`
-}
-
-// When submitting data to Librato, we need to coerce
-// our bucket representation into something their API
-// can handle. Because there is not a 1-1 parity
-// with the statistical functions that a bucket offers and
-// the types of data the Librato API accepts (e.g. Librato does-
-// not have support for perc50, perc95, perc99) we need to expand
-// our bucket into a set of LibratoMetric(s).
-type LibratoMetric struct {
-	Name   string        `json:"name"`
-	Time   int64         `json:"measure_time"`
-	Val    *float64      `json:"value,omitempty"`
-	Count  *int          `json:"count,omitempty"`
-	Sum    *float64      `json:"sum,omitempty"`
-	Max    *float64      `json:"max,omitempty"`
-	Min    *float64      `json:"min,omitempty"`
-	Source string        `json:"source,omitempty"`
-	Auth   string        `json:"-"`
-	Attr   *LibratoAttrs `json:"attributes,omitempty"`
-}
-
 type LibratoOutlet struct {
 	inbox       chan *bucket.Bucket
-	conversions chan *LibratoMetric
-	outbox      chan []*LibratoMetric
+	conversions chan *metrics.LibratoMetric
+	outbox      chan []*metrics.LibratoMetric
 	numOutlets  int
 	rdr         *reader.Reader
 	conn        *http.Client
@@ -78,34 +50,12 @@ func buildClient(ttl time.Duration) *http.Client {
 	return &http.Client{Transport: tr}
 }
 
-// Convert a bucket.Metric to a LibratoMetric
-func LibratoConvertMetric(m *bucket.Metric) *LibratoMetric {
-	attrs := &LibratoAttrs{
-		Min:   m.Attr.Min,
-		Units: m.Attr.Units,
-	}
-	l := &LibratoMetric{
-		Name:   m.Name,
-		Time:   m.Time,
-		Val:    m.Val,
-		Count:  m.Count,
-		Sum:    m.Sum,
-		Max:    m.Max,
-		Min:    m.Min,
-		Source: m.Source,
-		Auth:   m.Auth,
-		Attr:   attrs,
-	}
-	return l
-
-}
-
 func NewLibratoOutlet(cfg *conf.D, r *reader.Reader) *LibratoOutlet {
 	l := new(LibratoOutlet)
 	l.conn = buildClient(cfg.OutletTtl)
 	l.inbox = make(chan *bucket.Bucket, cfg.BufferSize)
-	l.conversions = make(chan *LibratoMetric, cfg.BufferSize)
-	l.outbox = make(chan []*LibratoMetric, cfg.BufferSize)
+	l.conversions = make(chan *metrics.LibratoMetric, cfg.BufferSize)
+	l.outbox = make(chan []*metrics.LibratoMetric, cfg.BufferSize)
 	l.numOutlets = cfg.Concurrency
 	l.numRetries = cfg.OutletRetries
 	l.rdr = r
@@ -129,7 +79,7 @@ func (l *LibratoOutlet) Start() {
 func (l *LibratoOutlet) convert() {
 	for bucket := range l.inbox {
 		for _, m := range bucket.Metrics() {
-			l.conversions <- LibratoConvertMetric(m)
+			l.conversions <- metrics.LibratoConvertMetric(m)
 		}
 		delay := bucket.Id.Delay(time.Now())
 		l.Mchan.Measure("outlet.delay", float64(delay))
@@ -138,7 +88,7 @@ func (l *LibratoOutlet) convert() {
 
 func (l *LibratoOutlet) groupByUser() {
 	ticker := time.Tick(time.Millisecond * 200)
-	m := make(map[string][]*LibratoMetric)
+	m := make(map[string][]*metrics.LibratoMetric)
 	for {
 		select {
 		case <-ticker:
@@ -151,7 +101,7 @@ func (l *LibratoOutlet) groupByUser() {
 		case payload := <-l.conversions:
 			usr := payload.Auth
 			if _, present := m[usr]; !present {
-				m[usr] = make([]*LibratoMetric, 1, 300)
+				m[usr] = make([]*metrics.LibratoMetric, 1, 300)
 				m[usr][0] = payload
 			} else {
 				m[usr] = append(m[usr], payload)
@@ -183,7 +133,7 @@ func (l *LibratoOutlet) outlet() {
 			fmt.Printf("error=missing-creds\n")
 			continue
 		}
-		libratoReq := &libratoRequest{payloads}
+		libratoReq := &metrics.LibratoRequest{payloads}
 		j, err := json.Marshal(libratoReq)
 		if err != nil {
 			fmt.Printf("at=json error=%s user=%s\n", err, creds[0])
