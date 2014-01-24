@@ -2,13 +2,16 @@
 
 This is a fork of l2met to output to datadog rather than librato.  Since l2met is GPL licensed, if we end up distributing this, we'll have to make the source available.  
 
-## Design Changes for DataDog usage
+## Changes for DataDog
 
 The authorization for datadog API usage are just the single api_key.  [Encrypt it the same
 way](https://github.com/ryandotsmith/l2met/wiki/Usage#encrypted-librato-credentials) as the librato username/password was encrypted, but since it's just
 a single key there's no need for the colon separated values.
 
-The `-outlet` flag has been replaced by `-outlet-datadog` and `-outlet-librato` to enable the DataDog and Librato outlets, respectively.
+The `-outlet` flag has been deprecated by `-outlet-datadog` and `-outlet-librato` to enable the DataDog and Librato outlets, respectively.  Use of `-outlet` enables the DataDog
+outlet, not the Librato outlet.
+
+The internal metric channel for reporting about l2met uses the DataDog outlet rather than the Librato outlet.  Provide your api_key as a username in your Metchan URL.
 
 The original README follows:
 

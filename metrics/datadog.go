@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/DataDog/l2met/auth"
 	"github.com/DataDog/l2met/bucket"
 	"github.com/DataDog/l2met/conf"
 )
@@ -84,14 +83,10 @@ func (d DataDogConverter) Convert() []*DataDog {
 
 }
 
-func (d DataDogConverter) Post() error {
+func (d DataDogConverter) Post(api_key string) error {
 	metrics := d.Convert()
 	if len(metrics) == 0 {
 		return errors.New("empty-metrics-error")
-	}
-	api_key, err := auth.Decrypt(metrics[0].Auth)
-	if err != nil {
-		return err
 	}
 	ddReq := &DataDogRequest{metrics}
 	body, err := json.Marshal(ddReq)

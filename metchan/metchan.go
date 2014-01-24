@@ -177,5 +177,5 @@ func (c *Channel) outlet() {
 func (c *Channel) post(m *bucket.Metric) error {
 	// FIXME: hardcoded to push to datadog, should be configurable?
 	dd := metrics.DataDogConverter{m}
-	return dd.Post()
+	return dd.Post(c.username)
 }
