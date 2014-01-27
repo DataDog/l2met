@@ -103,7 +103,6 @@ func New() *D {
 			d.MetchanUrl = url
 		}
 	}
-
 	return d
 }
 

@@ -32,7 +32,7 @@ func (m *MemStore) Now() time.Time {
 
 func (m *MemStore) Scan(schedule time.Time) (<-chan *bucket.Bucket, error) {
 	m.Lock()
-	//TODO(DataDog): Can we eliminate the magical number?
+	//TODO: Can we eliminate the magical number?
 	buckets := make(chan *bucket.Bucket, 1000)
 	go func(out chan *bucket.Bucket) {
 		defer m.Unlock()

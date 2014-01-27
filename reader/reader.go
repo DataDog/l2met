@@ -48,8 +48,10 @@ func (r *Reader) scan() {
 			fmt.Printf("at=bucket.scan error=%s\n", err)
 			continue
 		}
+		i := 0
 		for b := range buckets {
 			r.Inbox <- b
+			i++
 		}
 		r.Mchan.Time("reader.scan", startScan)
 	}
