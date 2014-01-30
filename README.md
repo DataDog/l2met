@@ -1,6 +1,6 @@
 # DataDog fork
 
-This is a fork of l2met to output to datadog rather than librato.  Since l2met is GPL licensed, if we end up distributing this, we'll have to make the source available.  
+This is a fork of l2met which outlets metrics to DataDog.
 
 ## Changes for DataDog
 
